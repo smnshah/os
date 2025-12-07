@@ -1,8 +1,13 @@
 [build]
-target = "x86_64-os.json"
+target = "x86_64-unknown-none"
 
-[target.x86_64-os]
-linker = "ld"
+[target.x86_64-unknown-none]
+linker = "ld.lld"
+
 rustflags = [
-    "-C", "link-args=-T kernel/arch/x86_64/linker.ld",
+    "-C", "relocation-model=static",
+    "-C", "link-arg=-Tlinker-x86_64.ld",
+    "-C", "link-arg=-no-pie",
+    "-C", "link-arg=-static",
+    "-C", "link-arg=-nostdlib",
 ]
