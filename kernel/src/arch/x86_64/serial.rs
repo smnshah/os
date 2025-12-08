@@ -22,24 +22,22 @@ const LSR: u16 = 5; // Line status
 ///
 /// See: <https://wiki.osdev.org/Serial_Ports>
 pub fn init() {
-    unsafe { 
-        outb(COM1_BASE + IER, 0x00);    // Disable interrupts
-        outb(COM1_BASE + LCR, 0x80);    // Enable DLAB
-        outb(COM1_BASE + DATA, 0x01);   // Divisor low byte (115200 baud)
-        outb(COM1_BASE + IER, 0x00);    // Divisor high byte
-        outb(COM1_BASE + LCR, 0x03);    // 8N1, disable DLAB
-        outb(COM1_BASE + FCR, 0xc7);    // Enable + clear FIFOs
-        outb(COM1_BASE + MCR, 0x0b);    // Enable DTR, RTS, OUT2
-    }
+    outb(COM1_BASE + IER, 0x00);    // Disable interrupts
+    outb(COM1_BASE + LCR, 0x80);    // Enable DLAB
+    outb(COM1_BASE + DATA, 0x01);   // Divisor low byte (115200 baud)
+    outb(COM1_BASE + IER, 0x00);    // Divisor high byte
+    outb(COM1_BASE + LCR, 0x03);    // 8N1, disable DLAB
+    outb(COM1_BASE + FCR, 0xc7);    // Enable + clear FIFOs
+    outb(COM1_BASE + MCR, 0x0b);    // Enable DTR, RTS, OUT2
 }
 
 pub fn write_byte(value: u8) {
     // Wait for transmit buffer empty (bit 5 of LSR)
     loop {
-        let in_byte = unsafe { inb(COM1_BASE + LSR) };
+        let in_byte = inb(COM1_BASE + LSR);
         if in_byte & 0x20 != 0 { break; }
     }
-    unsafe { outb(COM1_BASE, value); }
+    outb(COM1_BASE, value);
 }
 
 pub fn write_str(string: &[u8]) {
@@ -49,7 +47,7 @@ pub fn write_str(string: &[u8]) {
 }
 
 #[inline]
-unsafe fn outb(port: u16, value: u8) {
+fn outb(port: u16, value: u8) {
     unsafe {
         asm!(
             "out dx, al",
@@ -61,7 +59,7 @@ unsafe fn outb(port: u16, value: u8) {
 }
 
 #[inline]
-unsafe fn inb(port: u16) -> u8 {
+fn inb(port: u16) -> u8 {
     let value: u8;
 
     unsafe {
