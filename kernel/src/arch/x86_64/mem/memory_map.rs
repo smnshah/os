@@ -27,7 +27,6 @@ impl MemoryRegion {
     }
 }
 
-pub static mut HHDM_OFFSET: u64 = 0;
 static mut MEMORY_REGIONS: [MemoryRegion; 64] = [MemoryRegion::empty(); 64];
 static mut REGION_COUNT: usize = 0;
 
