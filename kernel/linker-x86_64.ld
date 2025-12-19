@@ -1,15 +1,15 @@
 OUTPUT_FORMAT(elf64-x86-64)
 ENTRY(kernel_main)
 
-PHDRS
-{
-    text PT_LOAD FLAGS(5);  /* Read + Execute */
-    data PT_LOAD FLAGS(6);  /* Read + Write */
-}
+KERNEL_VMA = 0xffffffff80000000;
 
 SECTIONS
 {
-    . = 0xFFFFFFFF80000000;
+    . = KERNEL_VMA;
+
+    .limine_reqs : ALIGN(8) {
+        KEEP(*(.limine_reqs))
+    } :data
 
     .text : ALIGN(4K) {
         *(.text .text.*)
@@ -33,3 +33,4 @@ SECTIONS
         *(.note .note.*)
     }
 }
+

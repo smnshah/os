@@ -3,11 +3,11 @@
 
 mod arch;
 
-use crate::arch::x86_64::serial;
 use crate::arch::x86_64::mem::{frame_alloc, memory_map};
+use crate::arch::x86_64::serial;
 use core::panic::PanicInfo;
 
-#[unsafe(no_mangle)] 
+#[unsafe(no_mangle)]
 extern "C" fn kernel_main() -> ! {
     serial::init();
     serial::write_str(b"Hello world!\n");
