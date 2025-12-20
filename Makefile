@@ -5,31 +5,32 @@ LIMINE_DIR := boot/limine
 ISO_ROOT   := iso_root
 ISO        := os.iso
 
-KERNEL_BIN := $(KERNEL_DIR)/target/*/release/kernel
-LIMINE_CONFIG := $(LIMINE_DIR)/config.status
+KERNEL_BIN := $(KERNEL_DIR)/target/x86_64-unknown-none/release/kernel
+LIMINE_BIN    := $(LIMINE_DIR)/bin/limine-bios.sys
+LIMINE_CONFIG_SCR := $(LIMINE_DIR)/configure
+LIMINE_MK := $(LIMINE_DIR)/GNUmakefile
 
-LIMINE_CONFIG_ARGS := \
+LIMINE_ARGS := \
 	--enable-bios \
 	--enable-bios-cd \
 	--enable-uefi-x86-64 \
 	--enable-uefi-cd
 
-all: iso
+all: kernel $(ISO)
 
-kernel: $(KERNEL_BIN)
-
-$(KERNEL_BIN):
+kernel:
 	cd $(KERNEL_DIR) && cargo build --release
 
-$(LIMINE_CONFIG):
-	cd $(LIMINE_DIR) && \
-	./bootstrap && \
-	./configure $(LIMINE_CONFIG_ARGS)
-
-limine: $(LIMINE_CONFIG)
+$(LIMINE_BIN): $(LIMINE_MK)
 	$(MAKE) -C $(LIMINE_DIR)
 
-$(ISO): kernel limine boot/limine.conf
+$(LIMINE_MK): $(LIMINE_CONF_SCR)
+	cd $(LIMINE_DIR) && ./configure $(LIMINE_ARGS)
+
+$(LIMINE_CONF_SCR):
+	cd $(LIMINE_DIR) && ./bootstrap
+
+$(ISO): $(KERNEL_BIN) $(LIMINE_BIN) boot/limine.conf
 	rm -rf $(ISO_ROOT)
 	mkdir -p $(ISO_ROOT)/EFI/BOOT
 	mkdir -p $(ISO_ROOT)/boot
