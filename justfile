@@ -1,5 +1,5 @@
 build:
-	make iso
+	make all
 
 run:
 	qemu-system-x86_64 \

@@ -1,4 +1,4 @@
-use crate::arch::x86_64::limine_requests::{MEMORY_MAP_REQUEST, HHDM_REQUEST};
+use crate::arch::x86_64::limine_requests::{HHDM_REQUEST, MEMORY_MAP_REQUEST};
 use limine::{memory_map::Entry, memory_map::EntryType};
 
 #[derive(Clone, Copy, Debug)]
@@ -41,7 +41,7 @@ pub fn build_kernel_memory_map() -> &'static [MemoryRegion] {
                 length: entry.length,
                 kind: get_entry_type(entry.entry_type),
             };
-            
+
             MEMORY_REGIONS[idx] = region;
             idx += 1;
         }
@@ -72,11 +72,11 @@ fn get_entry_type(entry_type: EntryType) -> RegionType {
         EntryType::USABLE => RegionType::Usable,
         EntryType::ACPI_RECLAIMABLE => RegionType::AcpiReclaimable,
         EntryType::BOOTLOADER_RECLAIMABLE => RegionType::Bootloader,
-        EntryType::RESERVED |
-        EntryType::ACPI_NVS |
-        EntryType::BAD_MEMORY |
-        EntryType::EXECUTABLE_AND_MODULES |
-        EntryType::FRAMEBUFFER => RegionType::Reserved,
+        EntryType::RESERVED
+        | EntryType::ACPI_NVS
+        | EntryType::BAD_MEMORY
+        | EntryType::EXECUTABLE_AND_MODULES
+        | EntryType::FRAMEBUFFER => RegionType::Reserved,
         _ => RegionType::Unknown,
     }
 }
