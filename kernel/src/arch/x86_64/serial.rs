@@ -7,6 +7,7 @@
 //! This driver uses x86_64 port I/O instructions.
 
 use core::arch::asm;
+use core::fmt;
 
 const COM1_BASE: u16 = 0x3f8;
 
@@ -17,6 +18,8 @@ const FCR: u16 = 2; // FIFO control
 const LCR: u16 = 3; // Line control
 const MCR: u16 = 4; // Modem control
 const LSR: u16 = 5; // Line status
+
+pub struct Serial;
 
 /// Initialize COM1 for 115200 baud, 8N1 (8 data bits, no parity, 1 stop bit).
 ///
@@ -29,6 +32,13 @@ pub fn init() {
     outb(COM1_BASE + LCR, 0x03); // 8N1, disable DLAB
     outb(COM1_BASE + FCR, 0xc7); // Enable + clear FIFOs
     outb(COM1_BASE + MCR, 0x0b); // Enable DTR, RTS, OUT2
+}
+
+impl fmt::Write for Serial {
+    fn write_str(&mut self, input: &str) -> fmt::Result {
+        write_str(input.as_bytes());
+        Ok(())
+    }
 }
 
 pub fn write_byte(value: u8) {
