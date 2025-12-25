@@ -12,8 +12,7 @@ pub fn init(regions: &[MemoryRegion], hhdm_offset: u64) {
         MAX_PFN = max_pfn(regions);
         BITMAP_SIZE = (MAX_PFN + 7) / 8;
 
-        let first_usable = first_usable_region(regions);
-        assert!(BITMAP_SIZE < first_usable.length as usize);
+        let first_usable = first_usable_region(regions, BITMAP_SIZE);
 
         BITMAP_PHYS_START = first_usable.base;
         let bitmap_vaddr = BITMAP_PHYS_START + hhdm_offset;
@@ -22,7 +21,7 @@ pub fn init(regions: &[MemoryRegion], hhdm_offset: u64) {
         for i in 0..BITMAP_SIZE {
             BITMAP_ADDR.add(i).write(0xff);
         }
-        
+
         for region in regions {
             if matches!(region.kind, RegionType::Usable) {
                 let start = start_frame(region);
@@ -67,10 +66,10 @@ fn bitmap_overlaps(pfn: usize) -> bool {
     }
 }
 
-fn first_usable_region(regions: &[MemoryRegion]) -> &MemoryRegion {
+fn first_usable_region(regions: &[MemoryRegion], bitmap_size: usize) -> &MemoryRegion {
     regions
         .iter()
-        .find(|r| matches!(r.kind, RegionType::Usable))
+        .find(|r| matches!(r.kind, RegionType::Usable) && r.length as usize >= bitmap_size)
         .expect("Bootloader should provide at least one usable region")
 }
 
@@ -84,10 +83,10 @@ fn is_frame_free(pfn: usize) -> bool {
     let (byte_idx, bit_idx) = frame_to_byte_bit(pfn);
     unsafe {
         if byte_idx >= BITMAP_SIZE {
-            return false
+            return false;
         }
         let byte = BITMAP_ADDR.add(byte_idx).read();
-        ((byte >> bit_idx) & 1) == 0        
+        ((byte >> bit_idx) & 1) == 0
     }
 }
 
@@ -97,7 +96,7 @@ fn mark_frame_free(pfn: usize) {
         if byte_idx >= BITMAP_SIZE {
             return;
         }
-            
+
         let byte = BITMAP_ADDR.add(byte_idx).read();
         let new_byte = byte & !(1 << bit_idx);
         BITMAP_ADDR.add(byte_idx).write(new_byte);
@@ -110,7 +109,7 @@ fn mark_frame_allocated(pfn: usize) {
         if byte_idx >= BITMAP_SIZE {
             return;
         }
-            
+
         let byte = BITMAP_ADDR.add(byte_idx).read();
         let new_byte = byte | (1 << bit_idx);
         BITMAP_ADDR.add(byte_idx).write(new_byte);
