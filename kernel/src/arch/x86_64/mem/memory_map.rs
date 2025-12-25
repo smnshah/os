@@ -1,4 +1,5 @@
 use crate::arch::x86_64::limine_requests::{HHDM_REQUEST, MEMORY_MAP_REQUEST};
+use crate::arch::x86_64::serial;
 use limine::{memory_map::Entry, memory_map::EntryType};
 
 #[derive(Clone, Copy, Debug)]
@@ -63,7 +64,6 @@ fn get_raw_entries() -> &'static [&'static Entry] {
     let response = MEMORY_MAP_REQUEST
         .get_response()
         .expect("Bootloader should provide memory map");
-
     response.entries()
 }
 
