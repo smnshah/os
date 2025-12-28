@@ -1,4 +1,4 @@
-use crate::arch::x86_64::mem::memory_map::{MemoryRegion, RegionType};
+use super::types::{MemoryRegion, RegionType};
 
 const PAGE_SIZE: usize = 4096;
 

@@ -2,9 +2,12 @@
 #![no_main]
 
 mod arch;
-mod print;
+mod boot;
+mod io;
+mod mm;
 
-use crate::arch::x86_64::mem::{frame_alloc, memory_map};
+use crate::boot::limine;
+use crate::mm::frame_alloc;
 use crate::arch::x86_64::serial;
 use core::panic::PanicInfo;
 
@@ -13,10 +16,10 @@ extern "C" fn kernel_main() -> ! {
     serial::init();
     println!("Initialized serial");
 
-    let regions = memory_map::build_kernel_memory_map();
+    let regions = limine::build_kernel_memory_map();
     println!("Built kernel memory map");
 
-    let hhdm = memory_map::get_hhdm_offset();
+    let hhdm = limine::get_hhdm_offset();
     println!("Got higher-half direct map offset");
 
     frame_alloc::init(regions, hhdm);

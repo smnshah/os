@@ -1,32 +1,19 @@
-use crate::arch::x86_64::limine_requests::{HHDM_REQUEST, MEMORY_MAP_REQUEST};
-use crate::arch::x86_64::serial;
+use limine::BaseRevision;
+use limine::request::{HhdmRequest, MemoryMapRequest};
 use limine::{memory_map::Entry, memory_map::EntryType};
+use crate::mm::types::{MemoryRegion, RegionType};
 
-#[derive(Clone, Copy, Debug)]
-pub enum RegionType {
-    Usable,
-    Reserved,
-    AcpiReclaimable,
-    Bootloader,
-    Unknown,
-}
+#[used]
+#[unsafe(link_section = ".limine_reqs")]
+pub static BASE_REVISION: BaseRevision = BaseRevision::new();
 
-#[derive(Clone, Copy, Debug)]
-pub struct MemoryRegion {
-    pub base: u64,
-    pub length: u64,
-    pub kind: RegionType,
-}
+#[used]
+#[unsafe(link_section = ".limine_reqs")]
+pub static MEMORY_MAP_REQUEST: MemoryMapRequest = MemoryMapRequest::new();
 
-impl MemoryRegion {
-    pub const fn empty() -> Self {
-        Self {
-            base: 0,
-            length: 0,
-            kind: RegionType::Unknown,
-        }
-    }
-}
+#[used]
+#[unsafe(link_section = ".limine_reqs")]
+pub static HHDM_REQUEST: HhdmRequest = HhdmRequest::new();
 
 static mut MEMORY_REGIONS: [MemoryRegion; 64] = [MemoryRegion::empty(); 64];
 static mut REGION_COUNT: usize = 0;
