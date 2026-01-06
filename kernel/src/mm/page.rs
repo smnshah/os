@@ -48,24 +48,52 @@ impl PageTable {
     }
 }
 
-pub enum PteError {
+#[derive(Debug)]
+enum PteError {
     HugePage,
     NotMapped,
     OutOfMemory,
 }
 
+#[derive(Debug)]
 pub enum MapError {
     AlreadyMapped,
     HugePage,
     OutOfMemory,
 }
 
-pub fn map() {
-
+#[derive(Debug)]
+pub enum UnmapError {
+    HugePage,
+    NotMapped,
 }
 
-pub fn unmap() {
+pub fn map(virt_addr: u64, phys_addr: u64, flags: u64, hhdm_offset: u64) -> Result<(), MapError> {
+    let pte = match get_pte_mut(virt_addr, hhdm_offset, true) {
+        Ok(pte) => pte,
+        Err(PteError::HugePage) => return Err(MapError::HugePage),
+        Err(PteError::OutOfMemory) => return Err(MapError::OutOfMemory),
+        Err(PteError::NotMapped) => unreachable!("allocate=true guarantees mapping"),
+    };
 
+    if pte.is_present() { return Err(MapError::AlreadyMapped); }
+    *pte = PageTableEntry::new(phys_addr | flags);
+    Ok(())
+}
+
+pub fn unmap(virt_addr: u64, hhdm_offset: u64) -> Result<u64, UnmapError> {
+    let pte = match get_pte_mut(virt_addr, hhdm_offset, false) {
+        Ok(pte) => pte,
+        Err(PteError::HugePage) => return Err(UnmapError::HugePage),
+        Err(PteError::NotMapped) => return Err(UnmapError::NotMapped),
+        Err(PteError::OutOfMemory) => unreachable!("allocate=false guarantees no new mapping"),
+    };
+
+    if !pte.is_present() { return Err(UnmapError::NotMapped); }
+    let phys_addr = pte.addr();
+    *pte = PageTableEntry::new(0);
+    mmu::invalidate_page(virt_addr);
+    Ok(phys_addr)
 }
 
 unsafe fn table_at(phys_addr: u64, hhdm_offset: u64) -> &'static mut PageTable {
