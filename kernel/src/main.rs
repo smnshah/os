@@ -6,15 +6,19 @@ mod boot;
 mod io;
 mod mm;
 
+use core::panic::PanicInfo;
+
 use crate::boot::limine;
 use crate::mm::frame;
-use crate::arch::x86_64::serial;
-use core::panic::PanicInfo;
+use crate::arch::x86_64::{gdt, serial};
 
 #[unsafe(no_mangle)]
 extern "C" fn kernel_main() -> ! {
     serial::init();
     println!("Initialized serial");
+
+    gdt::init();
+    println!("Initialized gdt");
 
     let regions = limine::build_kernel_memory_map();
     println!("Built kernel memory map");
