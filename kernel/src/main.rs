@@ -10,7 +10,7 @@ use core::panic::PanicInfo;
 
 use crate::boot::limine;
 use crate::mm::frame;
-use crate::arch::x86_64::{gdt, serial};
+use crate::arch::x86_64::{gdt, idt, serial};
 
 #[unsafe(no_mangle)]
 extern "C" fn kernel_main() -> ! {
@@ -19,6 +19,9 @@ extern "C" fn kernel_main() -> ! {
 
     gdt::init();
     println!("Initialized gdt");
+
+    idt::init();
+    println!("Initialized idt");
 
     let regions = limine::build_kernel_memory_map();
     println!("Built kernel memory map");

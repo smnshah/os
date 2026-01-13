@@ -1,6 +1,8 @@
 use core::arch::asm;
 use core::mem::size_of;
 use core::ptr::addr_of;
+use super::gdt::KERNEL_CODE_SELECTOR;
+use super::interrupts::divide_by_zero_stub;
 
 pub const IDT_LEN: usize = 256;
 static mut IDT: [IdtEntry; IDT_LEN] = [IdtEntry::empty(); IDT_LEN];
@@ -21,7 +23,7 @@ impl IdtEntry {
     pub const fn new(addr: u64) -> Self {
         Self { 
             offset_low: (addr & 0xFFFF) as u16,
-            selector: 0x28,
+            selector: KERNEL_CODE_SELECTOR,
             ist: 0,
             type_attrs: 0x8E,
             offset_mid: ((addr >> 16) & 0xFFFF) as u16,
@@ -49,7 +51,14 @@ struct Idtr {
     base: u64,
 }
 
-pub fn load_idt() {
+pub fn init() {
+    unsafe { 
+        IDT[0] = IdtEntry::new(divide_by_zero_stub as *const () as u64); 
+    }
+    load_idt();
+}
+
+fn load_idt() {
     unsafe {
         let idtr = Idtr {
             limit: (size_of::<IdtEntry>() * IDT_LEN - 1) as u16,
