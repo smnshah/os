@@ -3,10 +3,12 @@ use core::mem::size_of;
 use core::ptr::addr_of;
 
 pub const GDT_LEN: usize = 3;
+pub const KERNEL_CODE_IDX: usize = 1;
+pub const KERNEL_DATA_IDX: usize = 2;
 pub const KERNEL_CODE_SELECTOR: u16 = 0x08;
 pub const KERNEL_DATA_SELECTOR: u16 = 0x10;
 
-static mut GDT: [GdtEntry; GDT_LEN] = [GdtEntry::empty(); GDT_LEN];
+static mut GDT: Gdt = Gdt::new();
 
 #[repr(C, packed)]
 struct GdtDescriptor {
@@ -14,7 +16,7 @@ struct GdtDescriptor {
     offset: u64,
 }
 
-#[repr(C, packed)]
+#[repr(C)]
 #[derive(Clone, Copy)]
 struct GdtEntry {
     limit_low: u16,
@@ -27,7 +29,7 @@ struct GdtEntry {
 }
 
 impl GdtEntry {
-    pub const fn empty() -> Self {
+    const fn empty() -> Self {
         Self {
             limit_low: 0,
             base_low: 0,
@@ -38,7 +40,7 @@ impl GdtEntry {
         }
     }
 
-    pub const fn kernel_code() -> Self {
+    const fn kernel_code() -> Self {
         Self {
             limit_low: 0,
             base_low: 0,
@@ -49,7 +51,7 @@ impl GdtEntry {
         }
     }
 
-    pub const fn kernel_data() -> Self {
+    const fn kernel_data() -> Self {
         Self {
             limit_low: 0,
             base_low: 0,
@@ -61,28 +63,45 @@ impl GdtEntry {
     }
 }
 
+#[repr(C)]
+pub struct Gdt {
+    entries: [GdtEntry; GDT_LEN],
+}
+
+impl Gdt {
+    const fn new() -> Self {
+        Self {
+            entries: [GdtEntry::empty(); GDT_LEN],
+        }
+    }
+
+    pub fn set_entry(&mut self, idx: usize, entry: GdtEntry) {
+        self.entries[idx] = entry;
+    }
+
+    fn load(&self) {
+        unsafe {
+            let descriptor = GdtDescriptor {
+                size: (size_of::<GdtEntry>() * GDT_LEN - 1) as u16,
+                offset: addr_of!(self.entries) as u64, 
+            };
+
+            asm!("lgdt [{}]", in(reg) &descriptor, options(readonly, nostack));
+        }
+    }
+}
+
 pub fn init() {
     unsafe {
-        GDT[1] = GdtEntry::kernel_code();
-        GDT[2] = GdtEntry::kernel_data();
-
-        load_gdt();
+        let gdt = &raw mut GDT;
+        (*gdt).set_entry(KERNEL_CODE_IDX, GdtEntry::kernel_code());
+        (*gdt).set_entry(KERNEL_DATA_IDX, GdtEntry::kernel_data());
+        (*gdt).load();
         reload_segments();
     }
 }
 
-fn load_gdt() {
-    unsafe {
-        let descriptor = GdtDescriptor {
-            size: (size_of::<GdtEntry>() * GDT_LEN - 1) as u16,
-            offset: addr_of!(GDT) as u64, 
-        };
-
-        asm!("lgdt [{}]", in(reg) &descriptor, options(readonly, nostack));
-    }
-}
-
-fn reload_segments() {
+unsafe fn reload_segments() {
     unsafe {
         asm!(
             "mov ax, {data_sel}",

@@ -1,10 +1,15 @@
 use core::arch::naked_asm;
+use super::idt::Idt;
+use super::mmu::read_cr2;
 
+const DIVIDE_BY_ZERO_VEC: usize = 0;
+const PAGE_FAULT_VEC: usize = 14;
 const NUM_GP_REGS: usize = 15;
 const SAVED_REGS_SIZE: usize = NUM_GP_REGS * 8;
 
 #[repr(C)]
 pub struct InterruptStackFrame {
+    err_code: u64,
     rip: u64,
     cs: u64,
     rflags: u64,
@@ -13,10 +18,20 @@ pub struct InterruptStackFrame {
 }
 
 macro_rules! exception_stub {
-    ($name:ident, $handler:ident) => {
+    ($name:ident, $handler:ident, no_error_code) => {
+        exception_stub!(@impl $name, $handler, "push 0",);
+    };
+
+
+    ($name:ident, $handler:ident, has_error_code) => {
+        exception_stub!(@impl $name, $handler,);
+    };
+
+    (@impl $name:ident, $handler:ident, $($preamble:tt)*) => {
         #[unsafe(naked)]
         pub unsafe extern "C" fn $name() {
             naked_asm!(
+                $($preamble)*
                 "push rax",
                 "push rbx",
                 "push rcx",
@@ -49,6 +64,7 @@ macro_rules! exception_stub {
                 "pop rcx",
                 "pop rbx",
                 "pop rax",
+                "add rsp, 8",
                 "iretq",
                 offset = const SAVED_REGS_SIZE,
                 handler = sym $handler,
@@ -57,8 +73,30 @@ macro_rules! exception_stub {
     };
 }
 
-exception_stub!(divide_by_zero_stub, divide_by_zero_handler);
+exception_stub!(divide_by_zero_stub, divide_by_zero_handler, no_error_code);
+exception_stub!(page_fault_stub, page_fault_handler, has_error_code);
+
+pub fn register_handlers(idt: &mut Idt) {
+    idt.set_handler(DIVIDE_BY_ZERO_VEC, divide_by_zero_stub);
+    idt.set_handler(PAGE_FAULT_VEC, page_fault_stub);
+}
 
 extern "C" fn divide_by_zero_handler(frame: &InterruptStackFrame) {
     panic!("Divide by zero at {:#x}", frame.rip);
+}
+
+extern "C" fn page_fault_handler(frame: &InterruptStackFrame) {
+    let fault_addr = read_cr2();
+    let rip = frame.rip;
+    let err_code = frame.err_code;
+    let rsp = frame.rsp;
+    let present = err_code & 1;
+    let write = (err_code >> 1) & 1;
+    let user = (err_code >> 2) & 1;
+    
+    panic!("Page fault at {rip:#x}
+        Address: {fault_addr:#x}
+        Error: {err_code:#b} (present={present}, write={write}, user={user}) 
+        RSP: {rsp:#x}"
+    );
 }

@@ -1,11 +1,19 @@
 use core::arch::asm;
 use core::mem::size_of;
 use core::ptr::addr_of;
-use super::gdt::KERNEL_CODE_SELECTOR;
-use super::interrupts::divide_by_zero_stub;
 
-pub const IDT_LEN: usize = 256;
-static mut IDT: [IdtEntry; IDT_LEN] = [IdtEntry::empty(); IDT_LEN];
+use super::interrupts;
+use super::gdt::KERNEL_CODE_SELECTOR;
+
+const IDT_LEN: usize = 256;
+
+static mut IDT: Idt = Idt::new(); 
+
+#[repr(C, packed)]
+struct Idtr {
+    limit: u16,
+    base: u64,
+}
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -20,7 +28,7 @@ struct IdtEntry {
 }
 
 impl IdtEntry {
-    pub const fn new(addr: u64) -> Self {
+    const fn new(addr: u64) -> Self {
         Self { 
             offset_low: (addr & 0xFFFF) as u16,
             selector: KERNEL_CODE_SELECTOR,
@@ -32,7 +40,7 @@ impl IdtEntry {
         }    
     }
 
-    pub const fn empty() -> Self {
+    const fn empty() -> Self {
         Self { 
             offset_low: 0, 
             selector: 0, 
@@ -45,26 +53,40 @@ impl IdtEntry {
     }
 }
 
-#[repr(C, packed)]
-struct Idtr {
-    limit: u16,
-    base: u64,
+#[repr(C)]
+pub struct Idt {
+    entries: [IdtEntry; IDT_LEN],
+}
+
+impl Idt {
+    const fn new() -> Self {
+        Self {
+            entries: [IdtEntry::empty(); IDT_LEN],
+        }
+    }
+
+    pub fn set_handler(&mut self, vector: usize, stub: unsafe extern "C" fn()) {
+        self.entries[vector] = IdtEntry::new(stub as *const () as u64);
+    }
+
+    fn load(&self) {
+        unsafe {
+            let idtr = Idtr {
+                limit: (size_of::<IdtEntry>() * IDT_LEN - 1) as u16,
+                base: addr_of!(self.entries) as u64,
+            };
+
+            asm!("lidt [{}]", in(reg) &idtr, options(readonly, nostack));
+        }
+    }
 }
 
 pub fn init() {
-    unsafe { 
-        IDT[0] = IdtEntry::new(divide_by_zero_stub as *const () as u64); 
-    }
-    load_idt();
-}
-
-fn load_idt() {
     unsafe {
-        let idtr = Idtr {
-            limit: (size_of::<IdtEntry>() * IDT_LEN - 1) as u16,
-            base: addr_of!(IDT) as u64,
-        };
-
-        asm!("lidt [{}]", in(reg) &idtr, options(readonly, nostack));
+        let idt = &raw mut IDT;
+        interrupts::register_handlers(&mut *idt);
+        (*idt).load();
     }
 }
+
+
