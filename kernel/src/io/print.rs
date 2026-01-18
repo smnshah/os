@@ -10,10 +10,10 @@ macro_rules! print {
 #[macro_export]
 macro_rules! println {
     ($fmt:expr $(, $arg:tt)*) => {{
-        print!(concat!($fmt, "\n") $(, $arg)*)
+        $crate::print!(concat!($fmt, "\n") $(, $arg)*)
     }};
 
     () => {{
-        print!("\n")
+        $crate::print!("\n")
     }};
 }

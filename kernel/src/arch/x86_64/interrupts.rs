@@ -3,8 +3,10 @@ use super::idt::Idt;
 use super::mmu::read_cr2;
 
 const DIVIDE_BY_ZERO_VEC: usize = 0;
+const DOUBLE_FAULT_VEC: usize = 8;
 const GENERAL_PROTECTION_FAULT_VEC: usize = 13;
 const PAGE_FAULT_VEC: usize = 14;
+
 const NUM_GP_REGS: usize = 15;
 const SAVED_REGS_SIZE: usize = NUM_GP_REGS * 8;
 
@@ -83,17 +85,28 @@ macro_rules! exception_stub {
 }
 
 exception_stub!(divide_by_zero_stub, divide_by_zero_handler, no_error_code);
+exception_stub!(double_fault_stub, double_fault_handler, has_error_code);
 exception_stub!(general_protection_fault_stub, general_protection_fault_handler, has_error_code);
 exception_stub!(page_fault_stub, page_fault_handler, has_error_code);
 
 pub fn register_handlers(idt: &mut Idt) {
     idt.set_handler(DIVIDE_BY_ZERO_VEC, divide_by_zero_stub);
+    idt.set_handler(DOUBLE_FAULT_VEC, double_fault_stub);
     idt.set_handler(GENERAL_PROTECTION_FAULT_VEC, general_protection_fault_stub);
     idt.set_handler(PAGE_FAULT_VEC, page_fault_stub);
+
+    idt.set_ist(DOUBLE_FAULT_VEC, 1);
 }
 
 extern "C" fn divide_by_zero_handler(frame: &InterruptStackFrame) {
     panic!("Divide by zero at {:#x}", frame.rip);
+}
+
+extern "C" fn double_fault_handler(frame: &InterruptStackFrame) {
+    panic!("Double fault at {:#x}
+        RSP: {:#x}"
+        , frame.rip, frame.rsp
+    );
 }
 
 extern "C" fn page_fault_handler(frame: &InterruptStackFrame) {

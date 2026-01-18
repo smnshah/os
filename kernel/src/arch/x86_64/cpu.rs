@@ -1,4 +1,7 @@
 use core::ptr::addr_of;
+
+use crate::println;
+
 use super::gdt::{Gdt, TSS_SELECTOR};
 use super::tss::Tss;
 
@@ -23,7 +26,8 @@ impl Cpu {
 pub fn init() {
     unsafe {
         let cpu = &mut *(&raw mut CPU);
-        let df_stack_top = (addr_of!(cpu.df_stack)) as u64 + (cpu.df_stack.len()) as u64; 
+        let df_stack_top = (addr_of!(cpu.df_stack)) as u64 + (cpu.df_stack.len()) as u64;
+        
         cpu.tss.init(df_stack_top);
         
         let tss_addr = addr_of!(cpu.tss) as u64;

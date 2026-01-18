@@ -6,6 +6,7 @@ use super::interrupts;
 use super::gdt::KERNEL_CODE_SELECTOR;
 
 const IDT_LEN: usize = 256;
+const IST_MASK: u8 = 0x7;
 
 static mut IDT: Idt = Idt::new(); 
 
@@ -51,6 +52,10 @@ impl IdtEntry {
             reserved: 0, 
         }
     }
+
+    const fn set_ist(&mut self, ist: u8) {
+        self.ist = ist & IST_MASK;
+    }
 }
 
 #[repr(C)]
@@ -67,6 +72,10 @@ impl Idt {
 
     pub fn set_handler(&mut self, vector: usize, stub: unsafe extern "C" fn()) {
         self.entries[vector] = IdtEntry::new(stub as *const () as u64);
+    }
+
+    pub fn set_ist(&mut self, vector: usize, ist: u8) {
+        self.entries[vector].set_ist(ist);
     }
 
     fn load(&self) {
