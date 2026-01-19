@@ -1,5 +1,5 @@
 OUTPUT_FORMAT(elf64-x86-64)
-ENTRY(kernel_main)
+ENTRY(kernel_entry)
 
 KERNEL_VMA = 0xffffffff80000000;
 

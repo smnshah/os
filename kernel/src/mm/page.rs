@@ -9,9 +9,9 @@ pub struct PageTableEntry {
 }
 
 impl PageTableEntry {
-    const PRESENT: u64 = 1 << 0;
-    const WRITABLE: u64 = 1 << 1;
-    const HUGE: u64 = 1 << 7;
+    pub const PRESENT: u64 = 1 << 0;
+    pub const WRITABLE: u64 = 1 << 1;
+    pub const HUGE: u64 = 1 << 7;
     const ADDR_MASK: u64 = 0x000F_FFFF_FFFF_F000;
     
     pub fn new(value: u64) -> Self {

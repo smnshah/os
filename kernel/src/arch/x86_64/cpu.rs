@@ -1,6 +1,5 @@
+use core::arch::asm;
 use core::ptr::addr_of;
-
-use crate::println;
 
 use super::gdt::{Gdt, TSS_SELECTOR};
 use super::tss::Tss;
@@ -37,3 +36,17 @@ pub fn init() {
         Tss::load(TSS_SELECTOR); 
     }
 }
+
+pub fn switch_stack(stack_top: u64, target: extern "C" fn() -> !) -> ! {
+    unsafe {
+        asm!(
+            "mov rsp, {}",
+            "call {}",
+            "ud2",
+            in(reg) stack_top,
+            in(reg) target,
+            options(noreturn),
+        );
+    }
+}
+
