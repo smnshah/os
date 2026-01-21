@@ -12,6 +12,7 @@ impl PageTableEntry {
     pub const PRESENT: u64 = 1 << 0;
     pub const WRITABLE: u64 = 1 << 1;
     pub const HUGE: u64 = 1 << 7;
+    pub const GUARD: u64 = 1 << 9;
     const ADDR_MASK: u64 = 0x000F_FFFF_FFFF_F000;
     
     pub fn new(value: u64) -> Self {
@@ -24,6 +25,10 @@ impl PageTableEntry {
 
     pub fn is_huge(&self) -> bool {
         (self.entry & Self::HUGE) != 0
+    }
+
+    pub fn is_guard(&self) -> bool {
+        (self.entry & Self::GUARD) != 0
     }
 
     pub fn addr(&self) -> u64 {
@@ -60,12 +65,14 @@ pub enum MapError {
     AlreadyMapped,
     HugePage,
     OutOfMemory,
+    GuardPage,
 }
 
 #[derive(Debug)]
 pub enum UnmapError {
     HugePage,
     NotMapped,
+    GuardPage,
 }
 
 pub fn map(virt_addr: u64, phys_addr: u64, flags: u64, hhdm_offset: u64) -> Result<(), MapError> {
@@ -77,6 +84,7 @@ pub fn map(virt_addr: u64, phys_addr: u64, flags: u64, hhdm_offset: u64) -> Resu
     };
 
     if pte.is_present() { return Err(MapError::AlreadyMapped); }
+    if pte.is_guard() { return Err(MapError::GuardPage); }
     *pte = PageTableEntry::new(phys_addr | flags);
     Ok(())
 }
@@ -89,11 +97,27 @@ pub fn unmap(virt_addr: u64, hhdm_offset: u64) -> Result<u64, UnmapError> {
         Err(PteError::OutOfMemory) => unreachable!("allocate=false guarantees no new mapping"),
     };
 
+    if pte.is_guard() { return Err(UnmapError::GuardPage); }
     if !pte.is_present() { return Err(UnmapError::NotMapped); }
     let phys_addr = pte.addr();
     *pte = PageTableEntry::new(0);
     mmu::invalidate_page(virt_addr);
     Ok(phys_addr)
+}
+
+pub fn map_guard(virt_addr: u64, hhdm_offset: u64) -> Result<(), MapError> {
+    let pte = match get_pte_mut(virt_addr, hhdm_offset, true) {
+        Ok(pte) => pte,
+        Err(PteError::HugePage) => return Err(MapError::HugePage),
+        Err(PteError::OutOfMemory) => return Err(MapError::OutOfMemory),
+        Err(PteError::NotMapped) => unreachable!("allocate=true guarantees mapping"),
+    };
+
+    if pte.is_present() { return Err(MapError::AlreadyMapped); }
+    if pte.is_guard() { return Err(MapError::GuardPage); }
+
+    *pte = PageTableEntry::new(PageTableEntry::GUARD);
+    Ok(())
 }
 
 unsafe fn table_at(phys_addr: u64, hhdm_offset: u64) -> &'static mut PageTable {

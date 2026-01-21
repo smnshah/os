@@ -19,5 +19,7 @@ pub fn allocate_kernel_stack(hhdm_offset: u64) -> Result<u64, StackError> {
             .map_err(|_| StackError::MapFailed)?;
     }
 
+    page::map_guard(KERNEL_STACK_BASE, hhdm_offset).map_err(|_| StackError::MapFailed)?;
+
     Ok(KERNEL_STACK_BASE + ((KERNEL_STACK_PAGES + 1) as u64 * PAGE_SIZE))
 }
