@@ -3,6 +3,7 @@
 
 mod arch;
 mod boot;
+mod causality;
 mod io;
 mod mm;
 
