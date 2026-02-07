@@ -24,7 +24,7 @@
         default = pkgs.mkShell {
 	  packages = with pkgs; [ 
 	    git
-	    just
+	    llvmPackages_latest.clang
 	    llvmPackages_latest.llvm
 	    llvmPackages_latest.lld
 	    qemu
@@ -46,4 +46,3 @@
     );
   }; 
 }
-
