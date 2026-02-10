@@ -1,8 +1,10 @@
-
+/// Causal relationship for an event
 #[derive(Clone, Copy, Debug)]
-pub enum Origin {
-    Caused(EventId, Option<EventId>),
-    Root(RootCause)
+pub enum Cause {
+    /// No parent event, starts a new causal chain
+    Root(RootCause),
+    /// Direct immediate causal parent event
+    CausedBy(EventId),
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -20,18 +22,32 @@ pub enum EventData {
     None,
 }
 
-// cpu core + sequence number provide a gloablly unique EventId
+// cpu core + sequence number provide a globally unique EventId
 #[derive(Clone, Copy, Debug)]
 pub struct EventId {
-    pub core: u16,
-    pub sequence: u64,
+    core: u16,
+    sequence: u64,
+}
+
+impl EventId {
+    pub const fn new(core: u16, sequence: u64) -> Self {
+        Self { core, sequence}
+    }
+
+    pub const fn core(&self) -> u16 {
+        self.core
+    }
+
+    pub const fn sequence(&self) -> u64 {
+        self.sequence
+    }
 }
 
 #[derive(Debug)]
 pub struct Event {
     pub id: EventId,  
     pub kind: EventKind,
-    pub origin: Origin,
+    pub cause: Cause,
     pub data: EventData,
 }
 
