@@ -31,7 +31,7 @@ pub struct EventId {
 
 impl EventId {
     pub const fn new(core: u16, sequence: u64) -> Self {
-        Self { core, sequence}
+        Self { core, sequence }
     }
 
     pub const fn core(&self) -> u16 {
@@ -45,12 +45,8 @@ impl EventId {
 
 #[derive(Debug)]
 pub struct Event {
-    pub id: EventId,  
+    pub id: EventId,
     pub kind: EventKind,
     pub cause: Cause,
     pub data: EventData,
 }
-
-
-
-
