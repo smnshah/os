@@ -43,7 +43,7 @@ impl EventId {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub struct Event {
     pub id: EventId,
     pub kind: EventKind,

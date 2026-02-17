@@ -9,9 +9,10 @@ mod mm;
 
 use core::panic::PanicInfo;
 
-use crate::boot::limine;
-use crate::mm::{frame, stack};
 use crate::arch::x86_64::{cpu, idt, serial};
+use crate::boot::limine;
+use crate::causality::types::{Cause, EventData, EventKind, RootCause};
+use crate::mm::{frame, stack};
 
 #[unsafe(no_mangle)]
 extern "C" fn kernel_entry() -> ! {
@@ -30,7 +31,7 @@ extern "C" fn kernel_entry() -> ! {
     let stack_top = stack::allocate_kernel_stack(hhdm)
         .expect("Kernel stack should be successfully allocated and mapped");
     println!("Allocated kernel stack");
-    
+
     cpu::switch_stack(stack_top, kernel_main);
 }
 
@@ -42,7 +43,16 @@ extern "C" fn kernel_main() -> ! {
 
     idt::init();
     println!("Initialized idt");
-    
+
+    causality::init();
+    println!("Initialized causality module");
+
+    let _ = causality::record(
+        EventKind::Boot,
+        Cause::Root(RootCause::Boot),
+        EventData::None,
+    );
+
     loop {}
 }
 

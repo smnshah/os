@@ -1,4 +1,4 @@
-.PHONY: all build kernel limine run clean
+.PHONY: all build limine run clean FORCE
 
 KERNEL_DIR := kernel
 LIMINE_DIR := boot/limine
@@ -23,10 +23,9 @@ all: build
 
 build: $(ISO)
 
-kernel:
-	$(MAKE) $(KERNEL_BIN)
+FORCE:
 
-$(KERNEL_BIN):
+$(KERNEL_BIN): FORCE
 	cd $(KERNEL_DIR) && cargo build --release
 
 limine: $(LIMINE_EFI) $(LIMINE_UEFI_CD)
