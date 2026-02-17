@@ -1,4 +1,4 @@
-.PHONY: all kernel limine iso run run-uefi clean
+.PHONY: all build kernel limine run clean
 
 KERNEL_DIR := kernel
 LIMINE_DIR := boot/limine
@@ -11,7 +11,7 @@ LIMINE_MK := $(LIMINE_DIR)/GNUmakefile
 LIMINE_EFI := $(LIMINE_DIR)/bin/BOOTX64.EFI
 LIMINE_UEFI_CD := $(LIMINE_DIR)/bin/limine-uefi-cd.bin
 
-QEMU 	   := qemu-system-x86_64
+QEMU       := qemu-system-x86_64
 QEMU_SHARE := $(dir $(shell command -v $(QEMU)))../share/qemu
 OVMF_CODE  := $(QEMU_SHARE)/edk2-x86_64-code.fd
 
@@ -19,7 +19,9 @@ LIMINE_ARGS := \
 	--enable-uefi-x86-64 \
 	--enable-uefi-cd
 
-all: iso 
+all: build
+
+build: $(ISO)
 
 kernel:
 	$(MAKE) $(KERNEL_BIN)
@@ -53,11 +55,8 @@ $(ISO): $(KERNEL_BIN) $(LIMINE_EFI) $(LIMINE_UEFI_CD) boot/limine.conf
 		$(ISO_ROOT) \
 		-o $(ISO)
 
-iso: $(ISO)
-
-run: run-uefi
-
-run-uefi: $(ISO)
+run:
+	test -f "$(ISO)" || (echo "OS image not found: $(ISO). Run 'make build' first."; exit 1)
 	test -f "$(OVMF_CODE)" || (echo "OVMF firmware not found: $(OVMF_CODE)"; exit 1)
 	$(QEMU) -machine q35 \
 		-drive if=pflash,format=raw,readonly=on,file=$(OVMF_CODE) \
