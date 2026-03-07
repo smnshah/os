@@ -8,6 +8,8 @@ pub const KERNEL_CODE_SELECTOR: u16 = 0x08;
 pub const KERNEL_DATA_SELECTOR: u16 = 0x10;
 pub const USER_CODE_SELECTOR: u16 = 0x18;
 pub const USER_DATA_SELECTOR: u16 = 0x20;
+pub const USER_CODE_SELECTOR_R3: u16 = USER_CODE_SELECTOR | 0x03;
+pub const USER_DATA_SELECTOR_R3: u16 = USER_DATA_SELECTOR | 0x03;
 pub const TSS_SELECTOR: u16 = 0x28;
 
 #[repr(C, packed)]
