@@ -1,12 +1,14 @@
+use super::tss::TSS_LIMIT;
 use core::arch::asm;
 use core::mem::size_of;
 use core::ptr::addr_of;
-use super::tss::TSS_LIMIT;
 
-pub const GDT_LEN: usize = 3;
+pub const GDT_LEN: usize = 5;
 pub const KERNEL_CODE_SELECTOR: u16 = 0x08;
 pub const KERNEL_DATA_SELECTOR: u16 = 0x10;
-pub const TSS_SELECTOR: u16 = 0x18;
+pub const USER_CODE_SELECTOR: u16 = 0x18;
+pub const USER_DATA_SELECTOR: u16 = 0x20;
+pub const TSS_SELECTOR: u16 = 0x28;
 
 #[repr(C, packed)]
 struct GdtDescriptor {
@@ -62,7 +64,6 @@ struct GdtEntry {
     access: u8,
     limit_high_flags: u8,
     base_high: u8,
-
 }
 
 impl GdtEntry {
@@ -83,7 +84,7 @@ impl GdtEntry {
             base_low: 0,
             base_mid: 0,
             access: 0x9a,
-            limit_high_flags: 0xa0, 
+            limit_high_flags: 0xa0,
             base_high: 0,
         }
     }
@@ -98,12 +99,34 @@ impl GdtEntry {
             base_high: 0,
         }
     }
+
+    const fn user_code() -> Self {
+        Self {
+            limit_low: 0,
+            base_low: 0,
+            base_mid: 0,
+            access: 0xfa,
+            limit_high_flags: 0xa0,
+            base_high: 0,
+        }
+    }
+
+    const fn user_data() -> Self {
+        Self {
+            limit_low: 0,
+            base_low: 0,
+            base_mid: 0,
+            access: 0xf2,
+            limit_high_flags: 0,
+            base_high: 0,
+        }
+    }
 }
 
 #[repr(C)]
 pub struct Gdt {
     entries: [GdtEntry; GDT_LEN],
-    tss_desc: TssDescriptor, 
+    tss_desc: TssDescriptor,
 }
 
 impl Gdt {
@@ -113,6 +136,8 @@ impl Gdt {
                 GdtEntry::empty(),
                 GdtEntry::kernel_code(),
                 GdtEntry::kernel_data(),
+                GdtEntry::user_code(),
+                GdtEntry::user_data(),
             ],
             tss_desc: TssDescriptor::empty(),
         }
@@ -122,7 +147,7 @@ impl Gdt {
         unsafe {
             let descriptor = GdtDescriptor {
                 size: (size_of::<Gdt>() - 1) as u16,
-                offset: addr_of!(self.entries) as u64, 
+                offset: addr_of!(self.entries) as u64,
             };
 
             asm!("lgdt [{}]", in(reg) &descriptor, options(readonly, nostack));
@@ -147,11 +172,11 @@ fn reload_segments() {
             "mov es, ax",
             "mov ss, ax",
 
-            "push {code_sel}",      
-            "lea rax, [rip + 2f]",  
-            "push rax",             
-            "retfq",                
-            "2:",                  
+            "push {code_sel}",
+            "lea rax, [rip + 2f]",
+            "push rax",
+            "retfq",
+            "2:",
 
             code_sel = const KERNEL_CODE_SELECTOR,
             data_sel = const KERNEL_DATA_SELECTOR,
