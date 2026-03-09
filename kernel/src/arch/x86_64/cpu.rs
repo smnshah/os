@@ -24,6 +24,10 @@ impl Cpu {
             df_stack: [0; 4096],
         }
     }
+
+    fn set_kernel_rsp0(&mut self, stack_top: u64) {
+        self.tss.set_rsp0(stack_top);
+    }
 }
 
 pub fn init() {
@@ -59,4 +63,15 @@ pub fn switch_stack(stack_top: u64, target: extern "C" fn() -> !) -> ! {
 pub fn current_core_id() -> u16 {
     let cpu_id = unsafe { __cpuid(1) };
     ((cpu_id.ebx >> APIC_ID_SHIFT) & APIC_ID_MASK) as u16
+}
+
+/// # Safety
+/// Caller must guarantee exclusive access to CPU state.
+/// Valid only in single-core context. Once we activate SMP we'll replace single global
+/// CPU mutation with per-core CPU state acecss and exclusivity.
+pub unsafe fn set_kernel_rsp0(stack_top: u64) {
+    unsafe {
+        let cpu = &mut *(&raw mut CPU);
+        cpu.set_kernel_rsp0(stack_top);
+    }
 }

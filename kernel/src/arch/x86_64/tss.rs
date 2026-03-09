@@ -17,7 +17,7 @@ pub struct Tss {
     _ist5: u64,
     _ist6: u64,
     _ist7: u64,
-    _reserved3: u64,   
+    _reserved3: u64,
     _reserved4: u16,
     iopb_offset: u16,
 }
@@ -40,7 +40,7 @@ impl Tss {
             _reserved3: 0,
             _reserved4: 0,
             iopb_offset: size_of::<Tss>() as u16,
-        } 
+        }
     }
 
     pub unsafe fn load(selector: u16) {
@@ -49,9 +49,11 @@ impl Tss {
         }
     }
 
+    pub fn set_rsp0(&mut self, stack_top: u64) {
+        self.rsp0 = stack_top;
+    }
+
     pub fn init(&mut self, df_stack_top: u64) {
         self.ist1 = df_stack_top;
     }
 }
-
-
